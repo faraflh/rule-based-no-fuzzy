@@ -108,10 +108,26 @@
         "ketentuan publikasi",
         "nilai publikasi",
         "jurnal scopus",
+        "scopus q1",
+        "scopus q2",
+        "scopus q3",
+        "scopus q4",
+        "scopus q1 q4",
         "jurnal sinta",
+        "sinta s1",
+        "sinta s2",
+        "sinta s1 s2",
         "syarat publikasi skripsi",
+        "syarat pengajuan apresiasi publikasi ilmiah",
+        "apresiasi publikasi ilmiah",
         "nilai skripsi jurnal",
+        "nilai skripsi publikasi scopus",
+        "nilai skripsi publikasi sinta",
+        "nilai skripsi sinta",
+        "nilai skripsi scopus",
         "ekuivalensi jurnal",
+        "ekuivalensi nilai skripsi publikasi",
+        "ekuivalensi nilai publikasi",
         "loa jurnal",
         "konferensi internasional",
         "publikasi ilmiah"
@@ -793,6 +809,21 @@
         "apa misi"
       ],
       "response": "Misi Program Studi Teknik Informatika Universitas Riau:\n\n1. Menghasilkan lulusan yang kompeten di bidang Teknik Informatika.\n2. Meningkatkan kualitas lulusan agar adaptif terhadap perkembangan teknologi.\n3. Menanamkan etika profesional dan integritas tinggi kepada peserta didik.\n4. Mengembangkan riset dan inovasi berbasis teknologi, terutama di bidang kecerdasan buatan, untuk mendukung pembangunan.\n5. Memperluas jejaring kolaborasi, baik di tingkat nasional maupun regional."
+    },
+    {
+      "intent": "info_sitei",
+      "keywords": [
+        "sitei",
+        "apa itu sitei",
+        "kepanjangan sitei",
+        "sistem informasi teknik elektro dan informatika",
+        "sistem informasi teknik elektro & informatika",
+        "portal sitei",
+        "link sitei",
+        "fungsi sitei",
+        "kegunaan sitei"
+      ],
+      "response": "SITEI adalah singkatan dari **Sistem Informasi Teknik Elektro & Informatika**.\n\nBerdasarkan dokumen akademik Program Studi Teknik Informatika, SITEI merupakan portal atau sistem akademik Fakultas Teknik Universitas Riau yang digunakan untuk mengurus berbagai proses akademik secara online, terutama proses yang berkaitan dengan skripsi.\n\nSITEI digunakan untuk:\n\n1. Mengajukan topik atau judul skripsi.\n2. Mengunggah persyaratan seminar proposal.\n3. Mengisi logbook bimbingan.\n4. Melakukan verifikasi oleh dosen pembimbing, admin, Koordinator Skripsi, dan Koordinator Program Studi.\n5. Melihat jadwal seminar proposal atau ujian skripsi.\n6. Mengunggah dokumen sidang skripsi.\n7. Mengunduh dokumen tertentu seperti STI-9 atau STI-16.\n8. Menyelesaikan tahap akhir setelah sidang agar status lulus dan nilai keluar.\n\nLink SITEI:\n\nhttps://sitei.ft.unri.ac.id/"
     }
   ]
 }

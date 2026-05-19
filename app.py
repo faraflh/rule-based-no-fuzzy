@@ -162,15 +162,76 @@ class MasterRuleBasedChatbot:
                     })
         return True
 
+    def resolve_concentration(self, user_query):
+        text = self.normalize_text(user_query)
+        aliases = {
+            "Rekayasa Perangkat Lunak": ["rekayasa perangkat lunak", "rpl", "perangkat lunak", "software"],
+            "Komputasi Cerdas dan Visualisasi": ["komputasi cerdas dan visualisasi", "komputasi cerdas", "visualisasi", "kcv"],
+            "Komputasi Berbasis Jaringan": ["komputasi berbasis jaringan", "jaringan", "kbj"],
+        }
+        for group_name, group_aliases in aliases.items():
+            if any(re.search(rf"\b{re.escape(alias)}\b", text) for alias in group_aliases):
+                return group_name
+        for group_name in self.group_names:
+            if not group_name.upper().startswith("SEMESTER") and self.normalize_text(group_name) in text:
+                return group_name
+        return None
+
+    def get_keahlian_course_response(self, user_query):
+        if self.kurikulum_year != "2018":
+            return None
+
+        text = self.normalize_text(user_query)
+        roman_match = re.search(r"\bkeahlian\s+(i{1,3}|iv|v|1|2|3|4|5)\b", text)
+        if not roman_match:
+            return None
+
+        roman_map = {
+            "1": "I", "i": "I",
+            "2": "II", "ii": "II",
+            "3": "III", "iii": "III",
+            "4": "IV", "iv": "IV",
+            "5": "V", "v": "V",
+        }
+        keahlian = f"Keahlian {roman_map.get(roman_match.group(1), roman_match.group(1).upper())}"
+        concentration = self.resolve_concentration(user_query)
+        options = self.spec_map.get(keahlian, [])
+
+        if concentration:
+            options = [opt for opt in options if opt["concentration"] == concentration]
+
+        if not options:
+            return None
+
+        if len(options) == 1:
+            opt = options[0]
+            details = self.course_details.get(opt["course_name"], {})
+            return (
+                f"**Mata Kuliah {keahlian} - {opt['concentration']} (Kurikulum 2018):**\n\n"
+                f"- Nama: **{opt['course_name']}**\n"
+                f"- Kode: {details.get('code', '-')}\n"
+                f"- SKS: {details.get('sks', '4')}\n"
+                f"- Semester: {opt.get('semester', self.sem_map_2018.get(keahlian, '-'))}"
+            )
+
+        response = f"**Pilihan Mata Kuliah {keahlian} (Kurikulum 2018):**\n\n"
+        for opt in options:
+            details = self.course_details.get(opt["course_name"], {})
+            response += (
+                f"- **{opt['concentration']}**: {opt['course_name']} "
+                f"({details.get('code', '-')}, {details.get('sks', '4')} SKS, {opt.get('semester', '-')})\n"
+            )
+        return response
+
     def get_semester_info(self, semester_num):
         target = f"SEMESTER {semester_num}"
         for group in self.kurikulum_data.get(self.kurikulum_year, []):
             if group["group_name"].upper() == target:
                 total_sks = group.get("total_sks", "0")
-                response = f"📚 **{target} (Kurikulum {self.kurikulum_year})**\n\nTotal Beban: {total_sks} SKS\n\n"
+                response = f"**{target} (Kurikulum {self.kurikulum_year})**\n\nTotal Beban: {total_sks} SKS\n\n"
                 for c in group["courses"]:
                     if self.kurikulum_year == "2018" and c["name"] in self.spec_map:
-                        response += f"🔻 **{c['name']} ({c['sks']} SKS) → Pilih Konsentrasi:**\n"
+                        response += f"**{c['name']} ({c['sks']} SKS) - Pilih Konsentrasi:**\n"
                         for opt in self.spec_map[c["name"]]:
                             response += f"   - {opt['course_name']} ({opt['concentration']})\n"
                     else:
@@ -353,12 +414,60 @@ class MasterRuleBasedChatbot:
         sop_jte_hits = self.rule_search_sop(user_query, self.sop_jte_data, threshold=threshold, limit=limit)
         for chunk in sop_skripsi_hits:
             konten = self.format_konten(chunk.get('konten', ''))
-            sop_results.append(f"ðŸ“˜ **SOP Skripsi â€” {chunk.get('full_context', 'Info')}**\n\n{konten}")
+            sop_results.append(f"**SOP Skripsi - {chunk.get('full_context', 'Info')}**\n\n{konten}")
         for chunk in sop_jte_hits:
             konten = self.format_konten(chunk.get('konten', ''))
-            sop_results.append(f"ðŸ“— **SOP JTE â€” {chunk.get('full_context', 'Info')}**\n\n{konten}")
+            sop_results.append(f"**SOP JTE - {chunk.get('full_context', 'Info')}**\n\n{konten}")
         if sop_results:
             return "\n\n---\n\n".join(sop_results)
+        return None
+
+    def format_sop_item(self, item, source_label):
+        konten = self.format_konten(item.get('konten', ''))
+        return f"**{source_label} - {item.get('full_context', 'Info')}**\n\n{konten}"
+
+    def find_sop_by_phrase(self, data_list, phrases):
+        for phrase in phrases:
+            phrase = self.normalize_text(phrase)
+            for item in data_list:
+                haystack = self.item_text(item)
+                if phrase in haystack:
+                    return item
+        return None
+
+    def format_procedure_response(self, user_query, target):
+        text = self.normalize_text(user_query)
+        if target == "kp":
+            phrases = (
+                ["pengajuan seminar kerja praktek"]
+                if "seminar" in text
+                else ["pengajuan kerja praktek"]
+            )
+            item = self.find_sop_by_phrase(self.sop_jte_data, phrases)
+            return self.format_sop_item(item, "SOP JTE") if item else None
+
+        if target == "sempro":
+            phrases = (
+                ["prosedur pelaksanaan seminar proposal"]
+                if "pelaksanaan" in text
+                else ["prosedur seminar proposal skripsi"]
+            )
+            item = self.find_sop_by_phrase(self.sop_skripsi_data, phrases)
+            return self.format_sop_item(item, "SOP Skripsi") if item else None
+
+        if target == "sidang":
+            phrases = (
+                ["prosedur ujian skripsi"]
+                if "pelaksanaan" in text
+                else ["prosedur pendaftaran ujian skripsi", "prosedur ujian skripsi"]
+            )
+            item = self.find_sop_by_phrase(self.sop_skripsi_data, phrases)
+            return self.format_sop_item(item, "SOP Skripsi") if item else None
+
+        if target == "judul":
+            item = self.find_sop_by_phrase(self.sop_skripsi_data, ["prosedur pengusulan judul skripsi"])
+            return self.format_sop_item(item, "SOP Skripsi") if item else None
+
         return None
 
     def rule_search_curriculum(self, user_query):
@@ -379,7 +488,7 @@ class MasterRuleBasedChatbot:
         if not valid_matches:
             return None
 
-        response = f"🔍 **Hasil Pencarian Mata Kuliah ({self.kurikulum_year}):**\n"
+        response = f"**Hasil Pencarian Mata Kuliah ({self.kurikulum_year}):**\n"
         for name, _ in valid_matches:
             details = self.course_details[name]
             response += f"\n📖 **{name}**\n   • Kode : {details['code']}\n   • SKS  : {details['sks']}\n"
@@ -396,6 +505,8 @@ class MasterRuleBasedChatbot:
         query_tokens = set(self._meaningful_tokens(user_query))
         matches = []
         for name in self.course_names:
+            if self.kurikulum_year == "2018" and name in self.spec_map:
+                continue
             name_tokens = set(self._meaningful_tokens(name))
             if not name_tokens:
                 continue
@@ -449,14 +560,28 @@ class MasterRuleBasedChatbot:
     def get_all_dosen_response(self):
         item = next((d for d in self.dosen_data if d.get("intent") == "daftar_nama_dosen_ti"), None)
         if item:
-            return f"👨‍🏫 **Daftar Dosen TI:**\n\n{item['response']}"
+            return f"**Daftar Dosen TI:**\n\n{item['response']}"
         names = []
         for dosen in self.dosen_data:
             if dosen.get("intent", "").startswith("info_dosen_"):
                 first_line = str(dosen.get("response", "")).splitlines()[0]
                 if first_line:
                     names.append(f"- {first_line}")
-        return "👨‍🏫 **Daftar Dosen TI:**\n\n" + "\n".join(names)
+        return "**Daftar Dosen TI:**\n\n" + "\n".join(names)
+
+    def detect_procedure_target_after_action(self, user_query):
+        text = self.normalize_text(user_query)
+        action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan)"
+        targets = {
+            "kp": r"(?:kp|kerja praktek|kerja praktik|seminar kp)",
+            "sidang": r"(?:sidang skripsi|seminar hasil|semhas|ujian skripsi)",
+            "sempro": r"(?:seminar proposal|sempro)",
+            "judul": r"(?:(?:topik|judul)(?: skripsi)?)",
+        }
+        for target_name, target_pattern in targets.items():
+            if re.search(rf"\b{action}\b(?:\s+\w+){{0,8}}\s+\b{target_pattern}\b", text):
+                return target_name
+        return None
 
     # ------------------------------------------
     # HELPER: FORMAT KONTEN
@@ -526,9 +651,14 @@ class MasterRuleBasedChatbot:
         # 1. Perintah Sistem
         if "ganti" in expanded_input:
             if "2018" in expanded_input:
-                return "✅ Berhasil beralih ke Kurikulum 2018." if self.load_curriculum("2018") else "❌ Data Kurikulum 2018 tidak ada."
+                return "Berhasil beralih ke Kurikulum 2018." if self.load_curriculum("2018") else "Data Kurikulum 2018 tidak ada."
             elif "2025" in expanded_input:
-                return "✅ Berhasil beralih ke Kurikulum 2025." if self.load_curriculum("2025") else "❌ Data Kurikulum 2025 tidak ada."
+                return "Berhasil beralih ke Kurikulum 2025." if self.load_curriculum("2025") else "Data Kurikulum 2025 tidak ada."
+
+        if "kurikulum 2018" in expanded_input and self.kurikulum_year != "2018":
+            self.load_curriculum("2018")
+        elif "kurikulum 2025" in expanded_input and self.kurikulum_year != "2025":
+            self.load_curriculum("2025")
 
         sem_match = re.search(r"(?:sem|semester)\s*(\d+)", expanded_input)
         if "total" in expanded_input and "sks" in expanded_input:
@@ -536,14 +666,13 @@ class MasterRuleBasedChatbot:
                 return self.get_semester_info(sem_match.group(1))
             if any(keyword in expanded_input for keyword in ["tiap semester", "setiap semester", "per semester", "semua semester"]):
                 return self.get_total_sks_per_semester() or f"Total SKS Kurikulum {self.kurikulum_year}: 144 SKS."
-            return f"ðŸ¤– Total SKS yang harus ditempuh berdasarkan Kurikulum {self.kurikulum_year} adalah 144 SKS."
-
-        if False and "total" in expanded_input and "sks" in expanded_input:
-            return f"🤖 Total SKS yang harus ditempuh berdasarkan Kurikulum {self.kurikulum_year} adalah 144 SKS."
-
-        sem_match = re.search(r"(?:sem|semester)\s*(\d+)", expanded_input)
+            return f"Total SKS yang harus ditempuh berdasarkan Kurikulum {self.kurikulum_year} adalah 144 SKS."
         if sem_match:
             return self.get_semester_info(sem_match.group(1))
+
+        keahlian_response = self.get_keahlian_course_response(expanded_input)
+        if keahlian_response:
+            return keahlian_response
 
         # Query ujian semester harus masuk kalender, bukan intent umum "ujian seleksi".
         is_semester_exam_query = (
@@ -573,7 +702,7 @@ class MasterRuleBasedChatbot:
             best_kalender = self.rule_search_intent(expanded_input, self.kalender_data, threshold=60, calendar=True)
             if best_kalender:
                 ta = best_kalender.get("tahun_ajaran", "")
-                header = f"ðŸ“… **Informasi Akademik (TA {ta}):**" if ta else "ðŸ“… **Informasi Akademik:**"
+                header = f"**Informasi Akademik (TA {ta}):**" if ta else "**Informasi Akademik:**"
                 return f"{header}\n\n{best_kalender['response']}"
 
         if is_course_query:
@@ -581,28 +710,35 @@ class MasterRuleBasedChatbot:
             if kurikulum_response:
                 return kurikulum_response
 
-        # Query prosedural perlu minimal 2 konteks: aksi + objek, agar tidak tertabrak keyword umum.
-        is_procedure_query = re.search(r"\b(syarat|prosedur|pendaftaran|daftar|alur|cara|ketentuan)\b", cleaned_input)
-        is_skripsi_event_query = any(
-            keyword in expanded_input
-            for keyword in ["seminar proposal", "ujian skripsi", "sidang skripsi"]
-        )
-        is_kp_event_query = any(
-            keyword in cleaned_input
-            for keyword in ["seminar kp", "seminar kerja praktek", "seminar kerja praktik", "kerja praktek", "kerja praktik"]
-        )
-        if is_procedure_query and (is_skripsi_event_query or is_kp_event_query):
-            sop_response = self.format_sop_response(expanded_input, threshold=65, limit=2)
+        # Publikasi ilmiah terkait skripsi adalah informasi umum, bukan SOP skripsi.
+        is_publication_query = any(keyword in expanded_input for keyword in [
+            "publikasi", "publikasi ilmiah", "apresiasi publikasi", "ekuivalensi",
+            "scopus", "q1", "q2", "q3", "q4", "sinta", "s1", "s2",
+            "loa jurnal", "nilai publikasi", "nilai skripsi jurnal",
+        ])
+        if is_publication_query:
+            for item in self.informasi_umum_data:
+                if item.get("intent") == "info_ketentuan_publikasi":
+                    return f"**Informasi:**\n\n{item['response']}"
+
+        # Query prosedural wajib punya aksi + objek setelahnya, mis. "syarat KP" atau "prosedur sempro".
+        procedure_target = self.detect_procedure_target_after_action(expanded_input)
+        if procedure_target:
+            sop_response = self.format_procedure_response(expanded_input, procedure_target)
             if sop_response:
                 return sop_response
 
         # "Siapa saja ..." tidak selalu berarti daftar dosen; cek konteks skripsi/SITEI dulu.
         is_skripsi_context_query = any(keyword in expanded_input for keyword in [
-            "skripsi", "sitei", "topik", "judul", "seminar proposal", "ujian skripsi",
-            "pengajuan", "menyetujui", "memverifikasi",
+            "sitei", "topik", "judul", "menyetujui", "memverifikasi",
         ])
-        if is_skripsi_context_query:
-            sop_response = self.format_sop_response(expanded_input, threshold=70, limit=2)
+        has_procedure_action = re.search(r"\b(syarat|prosedur|tata cara|pendaftaran|pengajuan)\b", expanded_input)
+        if is_skripsi_context_query and (not has_procedure_action or procedure_target):
+            sop_response = (
+                self.format_procedure_response(expanded_input, procedure_target)
+                if procedure_target
+                else self.format_sop_response(expanded_input, threshold=70, limit=2)
+            )
             if sop_response:
                 return sop_response
 
@@ -622,11 +758,11 @@ class MasterRuleBasedChatbot:
                     misi_item = item
             
             if visi_item and misi_item:
-                return f"ℹ️ **Visi & Misi Program Studi:**\n\n{visi_item['response']}\n\n---\n\n{misi_item['response']}"
+                return f"**Visi & Misi Program Studi:**\n\n{visi_item['response']}\n\n---\n\n{misi_item['response']}"
             elif visi_item:
-                return f"ℹ️ **Informasi:**\n\n{visi_item['response']}"
+                return f"**Informasi:**\n\n{visi_item['response']}"
             elif misi_item:
-                return f"ℹ️ **Informasi:**\n\n{misi_item['response']}"
+                return f"**Informasi:**\n\n{misi_item['response']}"
         
         # Deteksi khusus untuk KPTI (HANYA jika user eksplisit mengetik "kpti")
         # Gunakan cleaned_input (bukan expanded) untuk menghindari false positive dari ekspansi "kp"
@@ -638,12 +774,12 @@ class MasterRuleBasedChatbot:
             kpti_num = kpti_specific_match.group(1)
             for item in self.informasi_umum_data:
                 if item.get("intent") == f"info_surat_kpti_{kpti_num}":
-                    return f"ℹ️ **Informasi:**\n\n{item['response']}"
+                    return f"**Informasi:**\n\n{item['response']}"
         elif kpti_general_match and not re.search(r'\b(syarat|prosedur|cara|alur|tata cara|ketentuan)\b', cleaned_input):
             # User hanya mengetik "kpti" saja tanpa konteks prosedur - tampilkan overview
             for item in self.informasi_umum_data:
                 if item.get("intent") == "info_overview_kpti":
-                    return f"📋 **Daftar Form KPTI:**\n\n{item['response']}"        
+                    return f"**Daftar Form KPTI:**\n\n{item['response']}"
         # Deteksi khusus untuk STI (HANYA jika user eksplisit mengetik "sti")
         # Pastikan bukan bagian dari kata lain (seperti "prestasi", "investasi")
         sti_specific_match = re.search(r'\bsti[-\s]?(\d+)\b', cleaned_input)
@@ -654,23 +790,23 @@ class MasterRuleBasedChatbot:
             sti_num = sti_specific_match.group(1)
             for item in self.informasi_umum_data:
                 if item.get("intent") == f"info_surat_sti_{sti_num}":
-                    return f"ℹ️ **Informasi:**\n\n{item['response']}"
+                    return f"**Informasi:**\n\n{item['response']}"
         elif sti_general_match and not re.search(r'\b(syarat|prosedur|cara|alur|tata cara|ketentuan)\b', cleaned_input):
             # User hanya mengetik "sti" saja tanpa konteks prosedur - tampilkan overview
             for item in self.informasi_umum_data:
                 if item.get("intent") == "info_overview_sti":
-                    return f"📋 **Daftar Form STI:**\n\n{item['response']}"
+                    return f"**Daftar Form STI:**\n\n{item['response']}"
         
         # KP MBKM — hanya tampilkan jika user eksplisit menyebut "mbkm" atau "merdeka belajar"
         if is_mbkm_query:
             for item in self.informasi_umum_data:
                 if item.get("intent") == "info_prosedur_kp_mbkm":
-                    return f"ℹ️ **Informasi:**\n\n{item['response']}"
+                    return f"**Informasi:**\n\n{item['response']}"
 
         if re.search(r"\b(ukt|uang kuliah tunggal|biaya kuliah)\b", expanded_input):
             for item in self.informasi_umum_data:
                 if item.get("intent") == "info_biaya_kuliah_teknik_informatika":
-                    return f"â„¹ï¸ **Informasi:**\n\n{item['response']}"
+                    return f"**Informasi:**\n\n{item['response']}"
 
         best_info = self.rule_search_intent(
             expanded_input,
@@ -679,7 +815,7 @@ class MasterRuleBasedChatbot:
             exclude_prefixes=["info_surat_kpti_", "info_surat_sti_", "info_overview_kpti", "info_overview_sti", "info_prosedur_kp_mbkm"]
         )
         if best_info:
-            return f"ℹ️ **Informasi:**\n\n{best_info['response']}"
+            return f"**Informasi:**\n\n{best_info['response']}"
 
         # 3. Dosen
         is_dosen_list_query = (
@@ -698,25 +834,25 @@ class MasterRuleBasedChatbot:
             raw = best_dosen['response']
             # Hindari double-spacing jika sudah ada \n\n
             dosen_response = re.sub(r'\n(?!\n)', '\n\n', raw)
-            return f"👨‍🏫 **Informasi Dosen:**\n\n{dosen_response}"
+            return f"**Informasi Dosen:**\n\n{dosen_response}"
 
         # 4. Kalender Akademik
         # Prioritaskan intent jadwal_wisuda_semua untuk query umum tentang wisuda
         if any(keyword in expanded_input for keyword in ["kapan wisuda", "jadwal wisuda", "wisuda kapan", "semua jadwal wisuda", "jadwal wisuda 2026", "jadwal wisuda 2027", "wisuda tahun ini"]) and not re.search(r"wisuda\s*(ke-?)?\s*\d+", expanded_input):
             for item in self.kalender_data:
                 if item.get("intent") == "jadwal_wisuda_semua":
-                    return f"📅 **Jadwal Wisuda:**\n\n{item['response']}"
+                    return f"**Jadwal Wisuda:**\n\n{item['response']}"
         
         best_kalender = self.rule_search_intent(expanded_input, self.kalender_data, threshold=80, calendar=True)
         if best_kalender:
             ta = best_kalender.get("tahun_ajaran", "")
-            header = f"📅 **Informasi Akademik (TA {ta}):**" if ta else "📅 **Informasi Akademik:**"
+            header = f"**Informasi Akademik (TA {ta}):**" if ta else "**Informasi Akademik:**"
             return f"{header}\n\n{best_kalender['response']}"
 
         # 5. Setelah Sidang
         best_setelah = self.rule_search_intent(expanded_input, self.setelah_sidang_data, threshold=80)
         if best_setelah:
-            return f"📂 **Setelah Sidang:**\n\n{best_setelah['response']}"
+            return f"**Setelah Sidang:**\n\n{best_setelah['response']}"
 
         # 6. Pedoman Penulisan Skripsi (dicek lebih dulu karena lebih spesifik untuk aturan penulisan)
         # Deteksi query umum tentang pedoman/aturan penulisan skripsi
@@ -725,9 +861,9 @@ class MasterRuleBasedChatbot:
             for chunk in self.skripsi_data:
                 if chunk.get("sub_topik") == "Umum" and chunk.get("topik_utama") in ["Kertas", "Pengetikan", "Penomoran", "Bahasa"]:
                     konten = self.format_konten(chunk.get('konten', ''))
-                    overview_chunks.append(f"📌 **{chunk.get('full_context', 'Info')}**\n\n{konten}")
+                    overview_chunks.append(f"**{chunk.get('full_context', 'Info')}**\n\n{konten}")
             if overview_chunks:
-                return "📖 **Pedoman Penulisan Skripsi:**\n\n" + "\n\n---\n\n".join(overview_chunks[:4]) + "\n\n💡 *Tanyakan lebih spesifik untuk detail (contoh: 'aturan margin', 'format tabel', 'daftar pustaka')*"
+                return "**Pedoman Penulisan Skripsi:**\n\n" + "\n\n---\n\n".join(overview_chunks[:4]) + "\n\n*Tanyakan lebih spesifik untuk detail (contoh: 'aturan margin', 'format tabel', 'daftar pustaka')*"
         
         matched_skripsi_cat = self.rule_search_skripsi_category(expanded_input, threshold=75)
         if matched_skripsi_cat:
@@ -735,14 +871,24 @@ class MasterRuleBasedChatbot:
             for chunk in self.skripsi_data:
                 if matched_skripsi_cat.lower() in chunk.get("sub_topik", "").lower() or matched_skripsi_cat.lower() in chunk.get("topik_utama", "").lower():
                     konten = self.format_konten(chunk.get('konten', ''))
-                    responses.append(f"📌 **{chunk.get('full_context', 'Info')}**\n\n{konten}")
+                    responses.append(f"**{chunk.get('full_context', 'Info')}**\n\n{konten}")
             if responses:
                 return "\n\n---\n\n".join(responses)
 
         # 7. SOP Skripsi & SOP JTE (dicek setelah Pedoman Skripsi)
-        sop_response = self.format_sop_response(expanded_input, threshold=70, limit=2)
-        if sop_response:
-            return sop_response
+        non_procedural_sop_context = any(keyword in expanded_input for keyword in [
+            "pakaian seminar", "pakaian sidang", "tim penguji", "pembimbing skripsi",
+            "waktu pengerjaan skripsi", "penilaian proposal", "penilaian ujian skripsi",
+            "setelah seminar kp", "setelah seminar kerja praktek", "setelah seminar kerja praktik",
+        ])
+        if procedure_target or non_procedural_sop_context:
+            sop_response = (
+                self.format_procedure_response(expanded_input, procedure_target)
+                if procedure_target
+                else self.format_sop_response(expanded_input, threshold=70, limit=2)
+            )
+            if sop_response:
+                return sop_response
 
         # 8. Kurikulum Matkul
         kurikulum_response = self.rule_search_curriculum(expanded_input)
