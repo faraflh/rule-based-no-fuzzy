@@ -6,6 +6,7 @@ Jalankan dengan: streamlit run app.py
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -1029,7 +1030,10 @@ if user_input:
     # Generate response
     with st.chat_message("assistant"):
         with st.spinner("Mencari jawaban..."):
+            start_time = time.perf_counter()
             response = bot.get_response(user_input)
+            elapsed = time.perf_counter() - start_time
         st.markdown(response)
+        st.caption(f"⏱️ Diproses dalam {elapsed * 1000:.1f} ms")
 
     st.session_state["messages"].append({"role": "assistant", "content": response})
