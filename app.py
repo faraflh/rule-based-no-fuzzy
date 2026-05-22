@@ -633,15 +633,6 @@ class MasterRuleBasedChatbot:
         has_next_stage = any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"])
         return has_skip_action and has_sempro and has_next_stage
 
-    def get_skip_skripsi_flow_response(self):
-        return (
-            "**SOP Skripsi - Alur Seminar Proposal ke Ujian Skripsi / Seminar Hasil**\n\n"
-            "Tidak bisa langsung melewati Seminar Proposal untuk lanjut ke Ujian Skripsi / Seminar Hasil. "
-            "Di SOP, pendaftaran Ujian Skripsi mensyaratkan mahasiswa **telah melaksanakan seminar proposal** "
-            "dan mengunggah **STI-9** di SITEI. Pendaftaran Ujian Skripsi juga dapat dilakukan paling cepat "
-            "**1 bulan setelah seminar proposal** dan paling lambat **1 tahun**."
-        )
-
     # ------------------------------------------
     # HELPER: FORMAT KONTEN
     # ------------------------------------------
@@ -734,7 +725,9 @@ class MasterRuleBasedChatbot:
             return keahlian_response
 
         if self.is_skip_skripsi_flow_query(expanded_input):
-            return self.get_skip_skripsi_flow_response()
+            sop_response = self.format_procedure_response(expanded_input, "sidang")
+            if sop_response:
+                return sop_response
 
         # Query tentang bimbingan skripsi/proposal/KP → arahkan ke SOP, bukan kurikulum.
         # Ini mencegah "seminar proposal" atau "skripsi" terdeteksi sebagai nama mata kuliah.
