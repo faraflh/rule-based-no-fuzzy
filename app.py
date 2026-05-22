@@ -467,6 +467,17 @@ class MasterRuleBasedChatbot:
             item = self.find_sop_by_phrase(self.sop_skripsi_data, phrases)
             return self.format_sop_item(item, "SOP Skripsi") if item else None
 
+        if target == "perpanjangan":
+            items = []
+            for item in self.sop_skripsi_data:
+                context = self.normalize_text(item.get("full_context", ""))
+                if context in {
+                    "prosedur perpanjangan skripsi i",
+                    "prosedur perpanjangan skripsi ii",
+                }:
+                    items.append(self.format_sop_item(item, "SOP Skripsi"))
+            return "\n\n---\n\n".join(items) if items else None
+
         if target == "judul":
             item = self.find_sop_by_phrase(self.sop_skripsi_data, ["prosedur pengusulan judul skripsi"])
             return self.format_sop_item(item, "SOP Skripsi") if item else None
@@ -574,15 +585,18 @@ class MasterRuleBasedChatbot:
 
     def detect_procedure_target_after_action(self, user_query):
         text = self.normalize_text(user_query)
-        action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan)"
+        action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan|mengajukan|ajukan|dokumen|berkas|form|surat)"
         targets = {
             "kp": r"(?:kp|kerja praktek|kerja praktik|seminar kp)",
             "sidang": r"(?:sidang skripsi|seminar hasil|semhas|ujian skripsi)",
             "sempro": r"(?:seminar proposal|sempro)",
+            "perpanjangan": r"(?:perpanjangan skripsi|perpanjang(?:an)? waktu skripsi|perpanjang skripsi)",
             "judul": r"(?:(?:topik|judul)(?: skripsi)?)",
         }
         for target_name, target_pattern in targets.items():
             if re.search(rf"\b{action}\b(?:\s+\w+){{0,8}}\s+\b{target_pattern}\b", text):
+                return target_name
+            if re.search(rf"\b{target_pattern}\b(?:\s+\w+){{0,8}}\s+\b{action}\b", text):
                 return target_name
         return None
 
@@ -590,10 +604,13 @@ class MasterRuleBasedChatbot:
         text = self.normalize_text(user_query)
         action_cues = [
             "kapan", "jadwal", "tanggal", "pelaksanaan", "syarat", "prosedur",
-            "tata cara", "pendaftaran", "pengajuan", "cara daftar",
+            "tata cara", "pendaftaran", "pengajuan", "cara daftar", "mengajukan",
+            "dokumen", "berkas", "form", "surat",
         ]
         if not any(cue in text for cue in action_cues):
             return None
+        if any(cue in text for cue in ["perpanjangan skripsi", "perpanjang waktu skripsi", "perpanjang skripsi"]):
+            return "perpanjangan"
         if any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"]):
             return "sidang"
         if any(cue in text for cue in ["seminar proposal", "sempro"]):
