@@ -336,6 +336,8 @@ class MasterRuleBasedChatbot:
                 intent_name = item.get("intent", "")
                 if any(intent_name.startswith(prefix) for prefix in exclude_prefixes):
                     continue
+            if not self._is_intent_allowed_for_query(user_query, item):
+                continue
             keywords = item.get("keywords", []) or item.get("keyword", [])
             targets = list(keywords)
             for field in ["intent", "topik_utama", "sub_topik", "full_context"]:
@@ -584,6 +586,62 @@ class MasterRuleBasedChatbot:
                 return target_name
         return None
 
+    def detect_skripsi_stage_target(self, user_query):
+        text = self.normalize_text(user_query)
+        action_cues = [
+            "kapan", "jadwal", "tanggal", "pelaksanaan", "syarat", "prosedur",
+            "tata cara", "pendaftaran", "pengajuan", "cara daftar",
+        ]
+        if not any(cue in text for cue in action_cues):
+            return None
+        if any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"]):
+            return "sidang"
+        if any(cue in text for cue in ["seminar proposal", "sempro"]):
+            return "sempro"
+        if any(cue in text for cue in ["seminar kp", "seminar kerja praktek", "seminar kerja praktik"]):
+            return "kp"
+        return None
+
+    def _has_admission_exam_context(self, user_query):
+        text = self.normalize_text(user_query)
+        admission_cues = [
+            "seleksi", "pendaftaran", "pmb", "jalur masuk", "jalur pendaftaran",
+            "mahasiswa baru", "calon mahasiswa", "snbp", "snbt", "smm", "smbt",
+            "utbk", "kartu peserta", "kartu ujian", "cetak kartu", "lokasi ujian",
+        ]
+        return any(cue in text for cue in admission_cues)
+
+    def _has_skripsi_exam_context(self, user_query):
+        text = self.normalize_text(user_query)
+        skripsi_cues = [
+            "skripsi", "proposal", "sempro", "seminar proposal", "seminar hasil",
+            "semhas", "sidang", "tugas akhir", "sitei", "sti", "pembimbing",
+            "penguji",
+        ]
+        return any(cue in text for cue in skripsi_cues)
+
+    def _is_intent_allowed_for_query(self, user_query, item):
+        intent = item.get("intent", "")
+        if intent == "info_ujian_seleksi":
+            return self._has_admission_exam_context(user_query) and not self._has_skripsi_exam_context(user_query)
+        return True
+
+    def is_skip_skripsi_flow_query(self, user_query):
+        text = self.normalize_text(user_query)
+        has_skip_action = bool(re.search(r"\b(skip|lewati|melewati|tanpa|langsung)\b", text))
+        has_sempro = any(cue in text for cue in ["seminar proposal", "sempro", "proposal"])
+        has_next_stage = any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"])
+        return has_skip_action and has_sempro and has_next_stage
+
+    def get_skip_skripsi_flow_response(self):
+        return (
+            "**SOP Skripsi - Alur Seminar Proposal ke Ujian Skripsi / Seminar Hasil**\n\n"
+            "Tidak bisa langsung melewati Seminar Proposal untuk lanjut ke Ujian Skripsi / Seminar Hasil. "
+            "Di SOP, pendaftaran Ujian Skripsi mensyaratkan mahasiswa **telah melaksanakan seminar proposal** "
+            "dan mengunggah **STI-9** di SITEI. Pendaftaran Ujian Skripsi juga dapat dilakukan paling cepat "
+            "**1 bulan setelah seminar proposal** dan paling lambat **1 tahun**."
+        )
+
     # ------------------------------------------
     # HELPER: FORMAT KONTEN
     # ------------------------------------------
@@ -675,6 +733,9 @@ class MasterRuleBasedChatbot:
         if keahlian_response:
             return keahlian_response
 
+        if self.is_skip_skripsi_flow_query(expanded_input):
+            return self.get_skip_skripsi_flow_response()
+
         # Query tentang bimbingan skripsi/proposal/KP → arahkan ke SOP, bukan kurikulum.
         # Ini mencegah "seminar proposal" atau "skripsi" terdeteksi sebagai nama mata kuliah.
         is_bimbingan_query = bool(re.search(r"\bbimbingan\b", expanded_input)) and any(
@@ -739,6 +800,12 @@ class MasterRuleBasedChatbot:
         procedure_target = self.detect_procedure_target_after_action(expanded_input)
         if procedure_target:
             sop_response = self.format_procedure_response(expanded_input, procedure_target)
+            if sop_response:
+                return sop_response
+
+        skripsi_stage_target = self.detect_skripsi_stage_target(expanded_input)
+        if skripsi_stage_target:
+            sop_response = self.format_procedure_response(expanded_input, skripsi_stage_target)
             if sop_response:
                 return sop_response
 
