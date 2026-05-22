@@ -675,6 +675,19 @@ class MasterRuleBasedChatbot:
         if keahlian_response:
             return keahlian_response
 
+        # Query tentang bimbingan skripsi/proposal/KP → arahkan ke SOP, bukan kurikulum.
+        # Ini mencegah "seminar proposal" atau "skripsi" terdeteksi sebagai nama mata kuliah.
+        is_bimbingan_query = bool(re.search(r"\bbimbingan\b", expanded_input)) and any(
+            kw in expanded_input for kw in [
+                "berapa", "minimal", "minimum", "syarat", "kali", "logbook",
+                "log book", "berapa kali", "jumlah", "ketentuan",
+            ]
+        )
+        if is_bimbingan_query:
+            sop_response = self.format_sop_response(expanded_input, threshold=50, limit=2)
+            if sop_response:
+                return sop_response
+
         # Query ujian semester harus masuk kalender, bukan intent umum "ujian seleksi".
         is_semester_exam_query = (
             re.search(r"\b(uts|uas)\b", cleaned_input)
