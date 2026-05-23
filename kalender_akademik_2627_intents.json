@@ -754,7 +754,13 @@
       "posttest toefl",
       "tes toefl akhir",
       "kapan posttest ept",
-      "jadwal posttest toefl"
+      "jadwal posttest toefl",
+      "posttest ept toefl",
+      "ept toefl akhir",
+      "toefl akhir",
+      "jadwal posttest ept toefl",
+      "kapan posttest toefl",
+      "english proficiency test akhir"
     ],
     "response": "Posttest EPT-TOEFL dilaksanakan pada 17 November 2026 sampai 15 Desember 2026."
   },
@@ -829,7 +835,13 @@
       "pretest toefl",
       "tes toefl awal",
       "kapan pretest ept",
-      "jadwal pretest toefl"
+      "jadwal pretest toefl",
+      "pretest ept toefl",
+      "ept toefl awal",
+      "toefl awal",
+      "jadwal pretest ept toefl",
+      "kapan pretest toefl",
+      "english proficiency test awal"
     ],
     "response": "Pretest EPT TOEFL dilaksanakan pada 20 Agustus 2026 sampai 20 September 2026."
   },

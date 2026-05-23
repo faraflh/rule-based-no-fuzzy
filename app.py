@@ -62,19 +62,45 @@ class MasterRuleBasedChatbot:
 
         # 2. Aturan Rule-Based untuk Skripsi
         self.skripsi_rules = {
-            "Kertas": ["kertas", "ukuran kertas", "hvs", "a4", "jenis kertas"],
-            "Cetakan naskah": ["cetakan", "bolak-balik", "satu sisi", "single side", "muka"],
-            "Jenis huruf": ["font", "jenis huruf", "times new roman", "tnr", "ukuran huruf"],
-            "Jarak baris": ["spasi", "jarak baris", "jarak paragraf", "line spacing", "jarak judul"],
-            "Batas tepi": ["margin", "batas tepi", "batas margin", "jarak tepi", "tepi atas", "tepi bawah", "tepi kiri", "tepi kanan", "kiri kanan"],
-            "Sampul CD": ["sampul cd", "cover cd", "label cd"],
-            "File CD": ["file cd", "nama file cd", "folder cd", "susunan file cd", "softcopy", "pdf"],
-            "Halaman Sampul": ["sampul", "cover", "warna sampul", "karton", "halaman depan", "buffalo"],
-            "Daftar Pustaka": ["daftar pustaka", "referensi", "apa style", "dafpus", "pustaka"],
-            "Tabel": ["tabel", "format tabel", "judul tabel", "kolom tabel", "sumber tabel"],
-            "Gambar": ["gambar", "ilustrasi", "grafik", "format gambar", "judul gambar"],
-            "Abstrak": ["abstrak", "ringkasan", "kata kunci", "keyword"],
-            "Penulisan": ["penulisan skripsi", "aturan penulisan", "format penulisan", "pedoman penulisan", "cara menulis skripsi"]
+            "Format Umum": ["format umum", "format skripsi", "pedoman skripsi", "aturan format", "aturan penulisan", "format penulisan"],
+            "Kertas": ["kertas", "ukuran kertas", "jenis kertas", "hvs", "a4", "70 gsm", "putih polos", "kertas skripsi"],
+            "Pengetikan": ["pengetikan", "aturan pengetikan", "format pengetikan", "ketikan skripsi", "format naskah", "tata tulis"],
+            "Cetakan naskah": ["cetakan naskah", "cetak naskah", "satu sisi", "single side", "bolak balik", "tidak bolak balik", "cetak skripsi", "print skripsi"],
+            "Jenis huruf": ["jenis huruf", "font", "ukuran font", "ukuran huruf", "huruf skripsi", "times new roman", "tnr", "12 pt", "font skripsi", "jenis font", "symbol", "huruf yunani"],
+            "Bilangan dan satuan": ["bilangan dan satuan", "bilangan", "satuan", "angka dan satuan", "bilangan desimal", "angka desimal", "koma desimal", "satuan resmi", "singkatan satuan"],
+            "Jarak baris": ["jarak baris", "spasi", "line spacing", "jarak paragraf", "spasi paragraf", "spasi abstrak", "spasi daftar isi", "spasi daftar tabel", "spasi daftar gambar", "spasi tabel", "spasi gambar", "spasi daftar pustaka", "jarak judul", "spacing"],
+            "Batas tepi": ["batas tepi", "margin", "batas margin", "jarak tepi", "tepi atas", "tepi bawah", "tepi kiri", "tepi kanan", "margin skripsi", "ukuran margin", "kiri kanan", "atas bawah"],
+            "Pengisian ruangan": ["pengisian ruangan", "halaman penuh", "ruang kosong", "bagian kosong", "isi halaman", "batas kiri kanan", "naskah penuh", "halaman naskah"],
+            "Permulaan kalimat": ["permulaan kalimat", "awal kalimat", "kalimat diawali angka", "kalimat diawali lambang", "kalimat diawali rumus", "angka awal kalimat", "singkatan awal kalimat", "narasi bilangan"],
+            "Penulisan kutipan langsung dan kutipan tidak langsung": ["kutipan", "kutipan langsung", "kutipan tidak langsung", "penulisan kutipan", "sitasi", "citation", "nama pengarang", "tahun terbit", "halaman kutipan", "tanda petik", "apa style"],
+            "Judul Bab, Sub Judul dan Anak Sub Judul": ["judul bab", "sub judul", "anak sub judul", "judul subbab", "subbab", "anak subbab", "heading", "judul kapital", "judul bold", "judul tebal", "format judul", "format sub judul"],
+            "Angka Romawi": ["angka romawi", "romawi", "roman numeral", "nomor bab", "bab i", "romawi besar", "romawi kecil", "halaman awal", "penomoran halaman awal", "i ii iii"],
+            "Angka Latin": ["angka latin", "nomor sub judul", "nomor subbab", "nomor anak sub judul", "nomor tabel", "nomor gambar", "nomor persamaan", "penomoran tabel", "penomoran gambar", "penomoran persamaan", "1.1", "1.1.1"],
+            "Penomoran": ["penomoran", "nomor halaman", "nomor skripsi", "letak nomor halaman", "halaman tengah bawah", "numbering", "page number"],
+            "Bentuk kalimat": ["bentuk kalimat", "kalimat pasif", "orang pertama", "orang kedua", "aku", "saya", "kami", "penulis", "kata ganti", "ucapan terima kasih"],
+            "Bahasa": ["bahasa", "bahasa indonesia", "bahasa baku", "ejaan", "puebi", "istilah asing", "kata asing", "bahasa asing", "subyek predikat", "kalimat baku"],
+            "Bagian Awal": ["bagian awal", "awal skripsi", "halaman awal", "susunan awal", "urutan bagian awal"],
+            "Halaman Sampul": ["halaman sampul", "sampul", "cover", "cover skripsi", "warna sampul", "karton", "buffalo", "plastik sampul", "judul sampul", "logo universitas", "lambang universitas", "punggung skripsi"],
+            "Halaman Judul": ["halaman judul", "judul skripsi", "lembar judul", "kertas putih", "tujuan karya ilmiah", "informasi tambahan", "format halaman judul", "lampiran iii"],
+            "Halaman Pernyataan Orisinalitas": ["halaman pernyataan orisinalitas", "orisinalitas", "originalitas", "pernyataan asli", "keaslian skripsi", "karya sendiri", "plagiarisme", "lembar orisinalitas", "justify alignment"],
+            "Halaman Pengesahan": ["halaman pengesahan", "lembar pengesahan", "pengesahan skripsi", "tanda tangan pembimbing", "dosen pembimbing", "koordinator program studi", "ketua jurusan", "spasi tunggal", "margin pengesahan"],
+            "Prakata": ["prakata", "kata pengantar", "ucapan terima kasih", "terima kasih", "format prakata", "halaman prakata", "judul prakata", "pihak yang membantu"],
+            "Halaman Pernyataan Persetujuan Publikasi Karya Ilmiah untuk": ["halaman pernyataan persetujuan publikasi", "persetujuan publikasi", "publikasi karya ilmiah", "kepentingan akademis", "hak cipta", "alihmedia", "menyimpan skripsi", "mempublikasikan skripsi", "lembar publikasi"],
+            "Abstrak": ["abstrak", "abstract", "ringkasan", "ikhtisar", "inti skripsi", "kata kunci", "keyword", "maksimal 250 kata", "bahasa indonesia dan inggris", "metode penelitian", "hasil penelitian"],
+            "Daftar Isi": ["daftar isi", "isi skripsi", "table of contents", "nomor halaman", "subbab daftar isi", "format daftar isi", "spasi daftar isi", "judul daftar isi", "lampiran x"],
+            "Daftar Tabel, Daftar Gambar, dan Daftar Lain": ["daftar tabel", "daftar gambar", "daftar lampiran", "daftar simbol", "daftar notasi", "daftar lain", "list of tables", "list of figures", "nama tabel", "nama gambar", "title case", "spasi daftar gambar", "spasi daftar tabel"],
+            "Bagian Isi": ["bagian isi", "isi skripsi", "bab skripsi", "pendahuluan", "tinjauan literatur", "bab utama", "kesimpulan dan saran", "susunan bab", "struktur skripsi", "jumlah bab"],
+            "Daftar Pustaka": ["daftar pustaka", "pustaka", "referensi", "daftar referensi", "apa style", "american psychology association", "sitasi", "sumber kutipan", "penulisan referensi", "urutan alfabetis", "judul referensi", "italic referensi", "dafpus"],
+            "Gambar": ["gambar", "ilustrasi", "grafik", "diagram", "denah", "peta", "bagan", "diagram alir", "potret", "judul gambar", "nomor gambar", "sumber gambar", "format gambar", "caption gambar", "peletakan gambar"],
+            "Tabel": ["tabel", "format tabel", "judul tabel", "nomor tabel", "sumber tabel", "isi tabel", "kolom tabel", "kepala tabel", "tabel sambungan", "caption tabel", "spasi tabel", "tabel landscape", "tabel landskap", "peletakan tabel"],
+            "Lambang": ["lambang", "lambang variabel", "simbol", "variabel", "abjad latin", "huruf yunani", "subskrip", "superskrip", "cetak bawah", "cetak atas", "lambang rumus"],
+            "Satuan dan Singkatan": ["satuan dan singkatan", "satuan", "singkatan", "satuan si", "s.i", "singkatan satuan", "lambang satuan", "satuan baku", "mili", "centi", "kilo", "mega", "mikro", "italic satuan"],
+            "Angka": ["angka", "bilangan", "penulisan angka", "tanda desimal", "tanda ribuan", "koma desimal", "titik ribuan", "persentase", "tanggal", "waktu", "angka awal kalimat", "bilangan pecahan", "angka kurang dari sepuluh"],
+            "Cetak Miring/Italic": ["cetak miring", "italic", "huruf miring", "miring", "kata asing", "istilah asing", "bahasa asing", "ukuran huruf miring", "format italic"],
+            "Penulisan Rumus dan Perhitungan Numerik": ["penulisan rumus", "rumus", "perhitungan numerik", "formula", "persamaan", "nomor rumus", "nomor persamaan", "rumus panjang", "operasi aritmetik", "tanda kurung", "operator kali", "centered", "posisi rumus"],
+            "Sampul CD": ["sampul cd", "cover cd", "label cd", "cd skripsi", "judul cd", "logo universitas riau", "identitas cd", "nama prodi", "nama jurusan", "lampiran xvii"],
+            "Penamaan File CD": ["penamaan file cd", "nama file cd", "file cd", "format file cd", "softcopy", "pdf", "file pdf", "kode jurusan", "kode prodi", "nama bab", "tahun skripsi", "portable digital format"],
+            "Susunan File CD": ["susunan file cd", "folder cd", "urutan file cd", "struktur file cd", "bagian awal cd", "bagian isi cd", "bagian akhir cd", "full version", "referensi pdf", "lampiran pdf", "softcopy skripsi"]
         }
 
         # 3. Variabel & Konfigurasi Kurikulum
@@ -392,6 +418,7 @@ class MasterRuleBasedChatbot:
                 str(item.get("topik_utama", "")),
                 str(item.get("sub_topik", "")),
                 str(item.get("full_context", "")),
+                " ".join(map(str, item.get("keywords", []) or item.get("keyword", []))),
                 self.format_konten(item.get("konten", "")),
             ]
             targets = [t for t in targets if t]
@@ -773,7 +800,7 @@ class MasterRuleBasedChatbot:
         ])
         calendar_topic_query = any(keyword in cleaned_input for keyword in [
             "revisi krs", "pengisian krs", "isi krs", "krs", "uts", "uas",
-            "perkuliahan", "kuliah", "praktikum", "ukt", "spp",
+            "perkuliahan", "kuliah", "praktikum", "ukt", "spp", "toefl", "ept",
         ])
         calendar_specific_ukt_query = "ukt" in cleaned_input and any(
             keyword in cleaned_input for keyword in ["snbp", "snbt", "smm", "smbt", "sanggah"]
@@ -960,9 +987,20 @@ class MasterRuleBasedChatbot:
         if matched_skripsi_cat:
             responses = []
             for chunk in self.skripsi_data:
-                if matched_skripsi_cat.lower() in chunk.get("sub_topik", "").lower() or matched_skripsi_cat.lower() in chunk.get("topik_utama", "").lower():
+                searchable_chunk = self.normalize_text(" ".join([
+                    str(chunk.get("topik_utama", "")),
+                    str(chunk.get("sub_topik", "")),
+                    str(chunk.get("full_context", "")),
+                ]))
+                is_format_intro = (
+                    matched_skripsi_cat == "Format Umum"
+                    and not chunk.get("topik_utama")
+                    and self.normalize_text(matched_skripsi_cat) in self.normalize_text(chunk.get("konten", ""))
+                )
+                if self.normalize_text(matched_skripsi_cat) in searchable_chunk or is_format_intro:
                     konten = self.format_konten(chunk.get('konten', ''))
-                    responses.append(f"**{chunk.get('full_context', 'Info')}**\n\n{konten}")
+                    title = chunk.get("full_context", "").strip() or chunk.get("topik_utama", "").strip() or konten.splitlines()[0]
+                    responses.append(f"**{title}**\n\n{konten}")
             if responses:
                 return "\n\n---\n\n".join(responses)
 
@@ -971,6 +1009,10 @@ class MasterRuleBasedChatbot:
             "pakaian seminar", "pakaian sidang", "tim penguji", "pembimbing skripsi",
             "waktu pengerjaan skripsi", "penilaian proposal", "penilaian ujian skripsi",
             "setelah seminar kp", "setelah seminar kerja praktek", "setelah seminar kerja praktik",
+            "minimal toefl", "minimum toefl", "skor toefl", "nilai toefl", "syarat toefl",
+            "toefl sidang", "toefl semhas", "toefl ujian skripsi",
+            "minimal logbook", "minimum logbook", "jumlah logbook", "berapa kali logbook",
+            "logbook bimbingan", "logbook sempro", "logbook semhas", "logbook sidang",
         ])
         if procedure_target or non_procedural_sop_context:
             sop_response = (

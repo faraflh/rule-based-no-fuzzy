@@ -120,7 +120,13 @@
         "map merah",
         "isi map merah",
         "dokumen map merah",
-        "berkas map merah"
+        "berkas map merah",
+        "toefl",
+        "sertifikat toefl",
+        "fotocopy toefl",
+        "fotokopi toefl",
+        "dokumen toefl",
+        "toefl map merah"
       ],
       "response": "Isi map merah mencakup formulir pendaftaran wisuda, pas foto latar merah, fotocopy KTM, KTP, KK, surat bebas pustaka UNRI, bukti penyerahan skripsi dari pustaka UNRI dan Fakultas Teknik, fotocopy ijazah SLTA, SK yudisium atau berita acara ujian, surat bebas laboratorium, surat pernyataan, sertifikat TOEFL, surat bebas teori, lembar pengesahan tugas akhir, dan map biasa warna merah."
     },
@@ -171,7 +177,15 @@
         "surat pernyataan",
         "sertifikat toefl",
         "surat bebas teori",
-        "bebas teori prodi"
+        "bebas teori prodi",
+        "toefl",
+        "fotocopy toefl",
+        "fotokopi toefl",
+        "dokumen toefl",
+        "syarat toefl",
+        "sertifikat ept",
+        "ept toefl",
+        "toefl bebas teori"
       ],
       "response": "Map merah juga perlu memuat surat pernyataan, fotocopy sertifikat TOEFL, surat keterangan bebas teori dari program studi, dan lembar pengesahan tugas akhir."
     },
@@ -205,7 +219,14 @@
         "skpi",
         "dokumen persyaratan ijazah",
         "pak yendra",
-        "pilihan wisuda"
+        "pilihan wisuda",
+        "toefl",
+        "sertifikat toefl",
+        "upload toefl",
+        "upload sertifikat toefl",
+        "toefl portal mahasiswa",
+        "dokumen toefl wisuda",
+        "syarat toefl wisuda"
       ],
       "response": "Setelah mendapatkan SKL, buka portal mahasiswa UNRI. Pada menu Kelulusan ke Tugas Akhir, isi dokumen persyaratan tugas akhir seperti rekap pembayaran SPP, surat bebas pustaka, sertifikat TOEFL, dan LOA publikasi jurnal. Lalu buka menu Kelulusan ke SKPI untuk mengisi datanya. Setelah itu buka menu Kelulusan ke Dokumen Persyaratan Ijazah untuk upload dokumen seperti scan ijazah akhir, SKL, KTP, dan KK. Setelah semua terisi, minta Pak Yendra menyetujui dokumen yang diunggah. Jika sudah disetujui, pilih jadwal wisuda di menu Kelulusan ke Wisuda."
     },

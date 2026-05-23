@@ -756,7 +756,19 @@
         "format logbook kp",
         "download logbook kp",
         "catatan harian kp",
-        "form logbook kp"
+        "form logbook kp",
+        "logbook",
+        "log book",
+        "buku log",
+        "buku log kp",
+        "format logbook",
+        "download logbook",
+        "unduh logbook",
+        "link logbook",
+        "template logbook kp",
+        "catatan kegiatan kp",
+        "catatan harian kerja praktik",
+        "bukti kegiatan kp"
       ],
       "response": "Berikut adalah link untuk mengunduh format Logbook KP Program Studi Teknik Informatika:\n\n[Download Logbook KP](https://docs.google.com/document/d/1ZLNNDkjwkFS75hmA4PJrW7WNpCwsRJrt/edit?usp=drive_link&ouid=116841305558879535225&rtpof=true&sd=true)\n\nPastikan logbook ini diisi secara rutin selama pelaksanaan Kerja Praktik sebagai catatan harian atau bukti kegiatan."
     },
@@ -821,7 +833,17 @@
         "portal sitei",
         "link sitei",
         "fungsi sitei",
-        "kegunaan sitei"
+        "kegunaan sitei",
+        "logbook bimbingan",
+        "log book bimbingan",
+        "isi logbook sitei",
+        "mengisi logbook",
+        "pengisian logbook",
+        "logbook skripsi",
+        "logbook proposal",
+        "logbook seminar proposal",
+        "logbook sempro",
+        "bimbingan di sitei"
       ],
       "response": "SITEI adalah singkatan dari **Sistem Informasi Teknik Elektro & Informatika**.\n\nBerdasarkan dokumen akademik Program Studi Teknik Informatika, SITEI merupakan portal atau sistem akademik Fakultas Teknik Universitas Riau yang digunakan untuk mengurus berbagai proses akademik secara online, terutama proses yang berkaitan dengan skripsi.\n\nSITEI digunakan untuk:\n\n1. Mengajukan topik atau judul skripsi.\n2. Mengunggah persyaratan seminar proposal.\n3. Mengisi logbook bimbingan.\n4. Melakukan verifikasi oleh dosen pembimbing, admin, Koordinator Skripsi, dan Koordinator Program Studi.\n5. Melihat jadwal seminar proposal atau ujian skripsi.\n6. Mengunggah dokumen sidang skripsi.\n7. Mengunduh dokumen tertentu seperti STI-9 atau STI-16.\n8. Menyelesaikan tahap akhir setelah sidang agar status lulus dan nilai keluar.\n\nLink SITEI:\n\nhttps://sitei.ft.unri.ac.id/"
     }
