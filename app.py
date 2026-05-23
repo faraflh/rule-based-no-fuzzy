@@ -250,6 +250,47 @@ class MasterRuleBasedChatbot:
             )
         return response
 
+    def is_concentration_query(self, user_query):
+        text = self.normalize_text(user_query)
+        return any(cue in text for cue in [
+            "konsentrasi", "peminatan", "bidang minat", "keahlian apa saja",
+            "daftar keahlian", "pilihan keahlian",
+        ])
+
+    def get_concentration_response(self):
+        year_groups = []
+        for year, groups in self.kurikulum_data.items():
+            concentration_groups = []
+            for group in groups:
+                group_name = str(group.get("group_name", ""))
+                normalized_group = self.normalize_text(group_name)
+                if (
+                    not group_name.upper().startswith("SEMESTER")
+                    and "total sks" not in normalized_group
+                    and group.get("courses")
+                ):
+                    concentration_groups.append(group)
+            if concentration_groups:
+                year_groups.append((year, concentration_groups))
+
+        if not year_groups:
+            return None
+
+        selected_year, groups = next(
+            ((year, groups) for year, groups in year_groups if year == self.kurikulum_year),
+            year_groups[0],
+        )
+        response = f"**Konsentrasi/Peminatan (Kurikulum {selected_year})**\n\n"
+        for group in groups:
+            response += f"**{group.get('group_name', 'Tanpa Nama')}**\n"
+            for course in group.get("courses", []):
+                response += (
+                    f"- {course.get('no', '-')}: {course.get('name', '-')} "
+                    f"({course.get('code', '-')}, {course.get('sks', '-')} SKS)\n"
+                )
+            response += "\n"
+        return response.strip()
+
     def get_semester_info(self, semester_num):
         target = f"SEMESTER {semester_num}"
         for group in self.kurikulum_data.get(self.kurikulum_year, []):
@@ -834,6 +875,11 @@ class MasterRuleBasedChatbot:
             return f"Total SKS yang harus ditempuh berdasarkan Kurikulum {self.kurikulum_year} adalah 144 SKS."
         if sem_match:
             return self.get_semester_info(sem_match.group(1))
+
+        if self.is_concentration_query(expanded_input):
+            concentration_response = self.get_concentration_response()
+            if concentration_response:
+                return concentration_response
 
         keahlian_response = self.get_keahlian_course_response(expanded_input)
         if keahlian_response:
