@@ -402,6 +402,18 @@ class MasterRuleBasedChatbot:
         return best_item if highest_score >= threshold else None
 
     def rule_search_skripsi_category(self, user_query, threshold=80):
+        query_text = self.normalize_text(user_query)
+        if "tabel" in query_text and any(cue in query_text for cue in [
+            "judul tabel", "format tabel", "nomor tabel", "sumber tabel",
+            "caption tabel", "isi tabel", "kolom tabel", "kepala tabel",
+        ]):
+            return "Tabel"
+        if "gambar" in query_text and any(cue in query_text for cue in [
+            "judul gambar", "format gambar", "nomor gambar", "sumber gambar",
+            "caption gambar",
+        ]):
+            return "Gambar"
+
         best_category = None
         highest_score = 0
         for category, keywords in self.skripsi_rules.items():
@@ -410,6 +422,65 @@ class MasterRuleBasedChatbot:
                 highest_score = score
                 best_category = category
         return best_category if highest_score >= threshold else None
+
+    def format_skripsi_category_response(self, matched_skripsi_cat):
+        responses = []
+        category_text = self.normalize_text(matched_skripsi_cat)
+        for chunk in self.skripsi_data:
+            fields = [
+                self.normalize_text(chunk.get("topik_utama", "")),
+                self.normalize_text(chunk.get("sub_topik", "")),
+                self.normalize_text(chunk.get("full_context", "")),
+            ]
+            is_format_intro = (
+                matched_skripsi_cat == "Format Umum"
+                and not chunk.get("topik_utama")
+                and category_text in self.normalize_text(chunk.get("konten", ""))
+            )
+            is_direct_category = any(
+                field == category_text
+                or field.endswith(f" {category_text}")
+                or field.startswith(f"{category_text} ")
+                for field in fields
+            )
+            if is_direct_category or is_format_intro:
+                konten = self.format_konten(chunk.get('konten', ''))
+                title = chunk.get("full_context", "").strip() or chunk.get("topik_utama", "").strip() or konten.splitlines()[0]
+                responses.append(f"**{title}**\n\n{konten}")
+        return "\n\n---\n\n".join(responses) if responses else None
+
+    def is_penulisan_object_query(self, user_query):
+        text = self.normalize_text(user_query)
+        writing_cues = [
+            "penulisan", "format", "aturan", "cara tulis", "cara menulis",
+            "judul tabel", "nomor tabel", "sumber tabel", "caption tabel",
+            "judul gambar", "nomor gambar", "caption gambar",
+        ]
+        return any(cue in text for cue in writing_cues)
+
+    def detect_judul_context_target(self, user_query):
+        text = self.normalize_text(user_query)
+        if not re.search(r"\bjudul\b", text):
+            return None
+
+        if "tabel" in text:
+            return ("skripsi_category", "Tabel")
+        if "gambar" in text:
+            return ("skripsi_category", "Gambar")
+        if "halaman" in text:
+            return ("skripsi_category", "Halaman Judul")
+        if "bab" in text or "sub judul" in text or "subjudul" in text:
+            return ("skripsi_category", "Judul Bab, Sub Judul dan Anak Sub Judul")
+
+        skripsi_cues = [
+            "skripsi", "topik", "pengajuan", "mengajukan", "ajukan", "usul",
+            "pengusulan", "sitei", "pembimbing", "koordinator", "menyetujui",
+            "memverifikasi",
+        ]
+        if any(cue in text for cue in skripsi_cues) or re.fullmatch(r"(?:apa|bagaimana|cara|info|informasi|tentang|mengenai|\s)*judul(?:\s+skripsi)?", text):
+            return ("procedure", "judul")
+
+        return ("procedure", "judul")
 
     def rule_search_sop(self, user_query, data_list, threshold=70, limit=2):
         scored = []
@@ -833,6 +904,18 @@ class MasterRuleBasedChatbot:
                 if item.get("intent") == "info_ketentuan_publikasi":
                     return f"**Informasi:**\n\n{item['response']}"
 
+        judul_context_target = self.detect_judul_context_target(expanded_input)
+        if judul_context_target:
+            target_type, target_value = judul_context_target
+            if target_type == "procedure":
+                sop_response = self.format_procedure_response(expanded_input, target_value)
+                if sop_response:
+                    return sop_response
+            elif target_type == "skripsi_category":
+                skripsi_response = self.format_skripsi_category_response(target_value)
+                if skripsi_response:
+                    return skripsi_response
+
         # Query prosedural wajib punya aksi + objek setelahnya, mis. "syarat KP" atau "prosedur sempro".
         procedure_target = self.detect_procedure_target_after_action(expanded_input)
         if procedure_target:
@@ -846,9 +929,16 @@ class MasterRuleBasedChatbot:
             if sop_response:
                 return sop_response
 
+        if self.is_penulisan_object_query(expanded_input):
+            matched_skripsi_cat = self.rule_search_skripsi_category(expanded_input, threshold=75)
+            if matched_skripsi_cat:
+                skripsi_response = self.format_skripsi_category_response(matched_skripsi_cat)
+                if skripsi_response:
+                    return skripsi_response
+
         # "Siapa saja ..." tidak selalu berarti daftar dosen; cek konteks skripsi/SITEI dulu.
         is_skripsi_context_query = any(keyword in expanded_input for keyword in [
-            "sitei", "topik", "judul", "menyetujui", "memverifikasi",
+            "sitei", "topik", "menyetujui", "memverifikasi",
         ])
         has_procedure_action = re.search(r"\b(syarat|prosedur|tata cara|pendaftaran|pengajuan)\b", expanded_input)
         if is_skripsi_context_query and (not has_procedure_action or procedure_target):
@@ -985,24 +1075,9 @@ class MasterRuleBasedChatbot:
         
         matched_skripsi_cat = self.rule_search_skripsi_category(expanded_input, threshold=75)
         if matched_skripsi_cat:
-            responses = []
-            for chunk in self.skripsi_data:
-                searchable_chunk = self.normalize_text(" ".join([
-                    str(chunk.get("topik_utama", "")),
-                    str(chunk.get("sub_topik", "")),
-                    str(chunk.get("full_context", "")),
-                ]))
-                is_format_intro = (
-                    matched_skripsi_cat == "Format Umum"
-                    and not chunk.get("topik_utama")
-                    and self.normalize_text(matched_skripsi_cat) in self.normalize_text(chunk.get("konten", ""))
-                )
-                if self.normalize_text(matched_skripsi_cat) in searchable_chunk or is_format_intro:
-                    konten = self.format_konten(chunk.get('konten', ''))
-                    title = chunk.get("full_context", "").strip() or chunk.get("topik_utama", "").strip() or konten.splitlines()[0]
-                    responses.append(f"**{title}**\n\n{konten}")
-            if responses:
-                return "\n\n---\n\n".join(responses)
+            skripsi_response = self.format_skripsi_category_response(matched_skripsi_cat)
+            if skripsi_response:
+                return skripsi_response
 
         # 7. SOP Skripsi & SOP JTE (dicek setelah Pedoman Skripsi)
         non_procedural_sop_context = any(keyword in expanded_input for keyword in [
