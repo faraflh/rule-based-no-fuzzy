@@ -617,6 +617,18 @@ class MasterRuleBasedChatbot:
                     items.append(self.format_sop_item(item, "SOP Skripsi"))
             return "\n\n---\n\n".join(items) if items else None
 
+        if target == "penilaian":
+            wants_proposal = any(cue in text for cue in ["seminar proposal", "sempro", "proposal"])
+            wants_ujian = any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"])
+            items = []
+            for item in self.sop_skripsi_data:
+                context = self.normalize_text(item.get("full_context", ""))
+                if context == "penilaian proposal skripsi" and (wants_proposal or not wants_ujian):
+                    items.append(self.format_sop_item(item, "SOP Skripsi"))
+                elif context == "penilaian ujian skripsi" and (wants_ujian or not wants_proposal):
+                    items.append(self.format_sop_item(item, "SOP Skripsi"))
+            return "\n\n---\n\n".join(items) if items else None
+
         if target == "judul":
             item = self.find_sop_by_phrase(self.sop_skripsi_data, ["prosedur pengusulan judul skripsi"])
             return self.format_sop_item(item, "SOP Skripsi") if item else None
@@ -656,6 +668,10 @@ class MasterRuleBasedChatbot:
             return None
 
         query_tokens = set(self._meaningful_tokens(user_query))
+        has_course_cue = any(keyword in user_query for keyword in ["mata kuliah", "matkul"])
+        comparable_query_tokens = set(query_tokens)
+        if has_course_cue:
+            comparable_query_tokens -= {"mata", "kuliah", "matkul"}
         matches = []
         for name in self.course_names:
             if self.kurikulum_year == "2018" and name in self.spec_map:
@@ -664,8 +680,7 @@ class MasterRuleBasedChatbot:
             if not name_tokens:
                 continue
             score = self._keyword_match_score(user_query, name)
-            overlap = query_tokens & name_tokens
-            has_course_cue = any(keyword in user_query for keyword in ["mata kuliah", "matkul"])
+            overlap = comparable_query_tokens & name_tokens
             if score == 0 and (
                 len(overlap) >= min(2, len(name_tokens))
                 or (has_course_cue and len(overlap) >= 1)
@@ -744,10 +759,15 @@ class MasterRuleBasedChatbot:
         action_cues = [
             "kapan", "jadwal", "tanggal", "pelaksanaan", "syarat", "prosedur",
             "tata cara", "pendaftaran", "pengajuan", "cara daftar", "mengajukan",
-            "dokumen", "berkas", "form", "surat",
+            "dokumen", "berkas", "form", "surat", "penilaian", "nilai", "bobot",
+            "pembimbing", "penguji",
         ]
         if not any(cue in text for cue in action_cues):
             return None
+        if any(cue in text for cue in ["penilaian", "nilai", "bobot"]) and any(cue in text for cue in [
+            "seminar proposal", "sempro", "proposal", "ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"
+        ]):
+            return "penilaian"
         if any(cue in text for cue in ["perpanjangan skripsi", "perpanjang waktu skripsi", "perpanjang skripsi"]):
             return "perpanjangan"
         if any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"]):
@@ -788,6 +808,26 @@ class MasterRuleBasedChatbot:
         has_sempro = any(cue in text for cue in ["seminar proposal", "sempro", "proposal"])
         has_next_stage = any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "seminar hasil", "semhas"])
         return has_skip_action and has_sempro and has_next_stage
+
+    def is_curriculum_context_query(self, user_query):
+        text = self.normalize_text(user_query)
+        return any(cue in text for cue in [
+            "mata kuliah", "matkul", "sks", "kode", "semester", "kurikulum",
+            "beban", "ambil", "mengambil",
+        ])
+
+    def is_skripsi_sop_context_query(self, user_query):
+        text = self.normalize_text(user_query)
+        has_skripsi_stage = any(cue in text for cue in [
+            "seminar proposal", "sempro", "proposal skripsi", "ujian skripsi",
+            "sidang skripsi", "seminar hasil", "semhas",
+        ])
+        has_sop_cue = any(cue in text for cue in [
+            "syarat", "prosedur", "tata cara", "pendaftaran", "pengajuan",
+            "pelaksanaan", "penilaian", "nilai", "bobot", "pembimbing",
+            "penguji", "lulus", "tidak lulus", "sitei", "sti",
+        ])
+        return has_skripsi_stage and has_sop_cue and not self.is_curriculum_context_query(text)
 
     # ------------------------------------------
     # HELPER: FORMAT KONTEN
@@ -1145,9 +1185,10 @@ class MasterRuleBasedChatbot:
                 return sop_response
 
         # 8. Kurikulum Matkul
-        kurikulum_response = self.rule_search_curriculum(expanded_input)
-        if kurikulum_response:
-            return kurikulum_response
+        if not self.is_skripsi_sop_context_query(expanded_input):
+            kurikulum_response = self.rule_search_curriculum(expanded_input)
+            if kurikulum_response:
+                return kurikulum_response
 
         # 9. Fallback
         return (
