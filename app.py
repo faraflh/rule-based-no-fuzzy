@@ -577,6 +577,15 @@ class MasterRuleBasedChatbot:
                     return item
         return None
 
+    def format_sop_items_by_context(self, contexts, source_label="SOP Skripsi"):
+        wanted = {self.normalize_text(context) for context in contexts}
+        items = []
+        for item in self.sop_skripsi_data:
+            context = self.normalize_text(item.get("full_context", ""))
+            if context in wanted:
+                items.append(self.format_sop_item(item, source_label))
+        return "\n\n---\n\n".join(items) if items else None
+
     def format_procedure_response(self, user_query, target):
         text = self.normalize_text(user_query)
         if target == "kp":
@@ -605,6 +614,20 @@ class MasterRuleBasedChatbot:
             )
             item = self.find_sop_by_phrase(self.sop_skripsi_data, phrases)
             return self.format_sop_item(item, "SOP Skripsi") if item else None
+
+        if target == "syarat_skripsi":
+            return self.format_sop_items_by_context([
+                "Mahasisiswa Skripsi",
+                "Prosedur Pengusulan Judul Skripsi",
+            ])
+
+        if target == "skripsi_overview":
+            return self.format_sop_items_by_context([
+                "Prosedur Pengusulan Judul Skripsi",
+                "Prosedur Seminar Proposal Skripsi",
+                "Prosedur Penelitian Skripsi",
+                "Prosedur Pendaftaran Ujian Skripsi / Seminar Hasil",
+            ])
 
         if target == "perpanjangan":
             items = []
@@ -742,9 +765,10 @@ class MasterRuleBasedChatbot:
         action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan|mengajukan|ajukan|dokumen|berkas|form|surat)"
         targets = {
             "kp": r"(?:kp|kerja praktek|kerja praktik|seminar kp)",
-            "sidang": r"(?:sidang skripsi|seminar hasil|semhas|ujian skripsi)",
+            "sidang": r"(?:sidang skripsi|sidang|seminar hasil|semhas|ujian skripsi)",
             "sempro": r"(?:seminar proposal|sempro)",
             "perpanjangan": r"(?:perpanjangan skripsi|perpanjang(?:an)? waktu skripsi|perpanjang skripsi)",
+            "syarat_skripsi": r"(?:skripsi|tugas akhir)",
             "judul": r"(?:(?:topik|judul)(?: skripsi)?)",
         }
         for target_name, target_pattern in targets.items():
@@ -777,6 +801,27 @@ class MasterRuleBasedChatbot:
         if any(cue in text for cue in ["seminar kp", "seminar kerja praktek", "seminar kerja praktik"]):
             return "kp"
         return None
+
+    def detect_general_skripsi_target(self, user_query):
+        text = self.normalize_text(user_query)
+        if not any(cue in text for cue in ["skripsi", "tugas akhir"]):
+            return None
+
+        if any(cue in text for cue in ["ujian skripsi", "sidang skripsi", "sidang", "seminar hasil", "semhas"]):
+            return "sidang"
+        if any(cue in text for cue in ["seminar proposal", "sempro"]):
+            return "sempro"
+        if any(cue in text for cue in ["ipk", "indeks prestasi"]):
+            return "sidang"
+        if any(cue in text for cue in [
+            "minimal sks", "minimum sks", "berapa sks", "sks minimal",
+            "mengambil skripsi", "ambil skripsi", "mengajukan skripsi",
+            "pengajuan skripsi", "syarat skripsi", "syarat pengajuan skripsi",
+        ]):
+            return "syarat_skripsi"
+        if any(cue in text for cue in ["prosedur", "alur", "tahapan", "cara"]):
+            return "skripsi_overview"
+        return "skripsi_overview"
 
     def _has_admission_exam_context(self, user_query):
         text = self.normalize_text(user_query)
@@ -1001,6 +1046,12 @@ class MasterRuleBasedChatbot:
                 skripsi_response = self.format_skripsi_category_response(target_value)
                 if skripsi_response:
                     return skripsi_response
+
+        general_skripsi_target = self.detect_general_skripsi_target(expanded_input)
+        if general_skripsi_target:
+            sop_response = self.format_procedure_response(expanded_input, general_skripsi_target)
+            if sop_response:
+                return sop_response
 
         # Query prosedural wajib punya aksi + objek setelahnya, mis. "syarat KP" atau "prosedur sempro".
         procedure_target = self.detect_procedure_target_after_action(expanded_input)
