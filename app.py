@@ -444,6 +444,14 @@ class MasterRuleBasedChatbot:
 
     def rule_search_skripsi_category(self, user_query, threshold=80):
         query_text = self.normalize_text(user_query)
+        if any(cue in query_text for cue in ["kertas", "hvs", "a4", "ukuran kertas"]):
+            return "Kertas"
+        if any(cue in query_text for cue in ["margin", "batas tepi", "tepi atas", "tepi bawah", "tepi kiri", "tepi kanan"]):
+            return "Batas tepi"
+        if any(cue in query_text for cue in ["spasi", "jarak baris", "line spacing", "jarak paragraf"]):
+            return "Jarak baris"
+        if any(cue in query_text for cue in ["font", "jenis huruf", "ukuran huruf", "times new roman", "tnr"]):
+            return "Jenis huruf"
         if "tabel" in query_text and any(cue in query_text for cue in [
             "judul tabel", "format tabel", "nomor tabel", "sumber tabel",
             "caption tabel", "isi tabel", "kolom tabel", "kepala tabel",
@@ -494,6 +502,8 @@ class MasterRuleBasedChatbot:
         text = self.normalize_text(user_query)
         writing_cues = [
             "penulisan", "format", "aturan", "cara tulis", "cara menulis",
+            "kertas", "ukuran kertas", "hvs", "a4", "margin", "batas tepi",
+            "spasi", "jarak baris", "font", "huruf", "times new roman", "tnr",
             "judul tabel", "nomor tabel", "sumber tabel", "caption tabel",
             "judul gambar", "nomor gambar", "caption gambar",
         ]
@@ -1047,6 +1057,13 @@ class MasterRuleBasedChatbot:
                 if skripsi_response:
                     return skripsi_response
 
+        if self.is_penulisan_object_query(expanded_input):
+            matched_skripsi_cat = self.rule_search_skripsi_category(expanded_input, threshold=75)
+            if matched_skripsi_cat:
+                skripsi_response = self.format_skripsi_category_response(matched_skripsi_cat)
+                if skripsi_response:
+                    return skripsi_response
+
         general_skripsi_target = self.detect_general_skripsi_target(expanded_input)
         if general_skripsi_target:
             sop_response = self.format_procedure_response(expanded_input, general_skripsi_target)
@@ -1065,13 +1082,6 @@ class MasterRuleBasedChatbot:
             sop_response = self.format_procedure_response(expanded_input, skripsi_stage_target)
             if sop_response:
                 return sop_response
-
-        if self.is_penulisan_object_query(expanded_input):
-            matched_skripsi_cat = self.rule_search_skripsi_category(expanded_input, threshold=75)
-            if matched_skripsi_cat:
-                skripsi_response = self.format_skripsi_category_response(matched_skripsi_cat)
-                if skripsi_response:
-                    return skripsi_response
 
         # "Siapa saja ..." tidak selalu berarti daftar dosen; cek konteks skripsi/SITEI dulu.
         is_skripsi_context_query = any(keyword in expanded_input for keyword in [
