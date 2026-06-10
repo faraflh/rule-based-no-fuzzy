@@ -587,25 +587,53 @@ class MasterRuleBasedChatbot:
                     return item
         return None
 
-    def format_sop_items_by_context(self, contexts, source_label="SOP Skripsi"):
+    def format_sop_items_by_context(self, contexts, source_label="SOP Skripsi", data_list=None):
         wanted = {self.normalize_text(context) for context in contexts}
         items = []
-        for item in self.sop_skripsi_data:
+        for item in (data_list or self.sop_skripsi_data):
             context = self.normalize_text(item.get("full_context", ""))
             if context in wanted:
                 items.append(self.format_sop_item(item, source_label))
         return "\n\n---\n\n".join(items) if items else None
 
+    def get_info_umum_by_intent(self, intent_name):
+        for item in self.informasi_umum_data:
+            if item.get("intent") == intent_name:
+                return f"**Informasi:**\n\n{item['response']}"
+        return None
+
     def format_procedure_response(self, user_query, target):
         text = self.normalize_text(user_query)
         if target == "kp":
-            phrases = (
-                ["pengajuan seminar kerja praktek"]
-                if "seminar" in text
-                else ["pengajuan kerja praktek"]
-            )
-            item = self.find_sop_by_phrase(self.sop_jte_data, phrases)
-            return self.format_sop_item(item, "SOP JTE") if item else None
+            if any(cue in text for cue in ["mbkm", "merdeka belajar", "konversi"]):
+                return self.get_info_umum_by_intent("info_prosedur_kp_mbkm")
+
+            if any(cue in text for cue in ["setelah seminar", "pasca seminar", "selesai seminar", "revisi laporan"]):
+                return self.format_sop_items_by_context([
+                    "PROSEDUR SETELAH SEMINAR KERJA PRAKTEK - a. Ketentuan Umum",
+                ], source_label="SOP JTE", data_list=self.sop_jte_data)
+
+            if "seminar" in text:
+                if any(cue in text for cue in ["syarat", "dokumen", "berkas", "form", "kpti"]):
+                    contexts = ["PENGAJUAN SEMINAR KERJA PRAKTEK - a. Syarat Pengajuan Seminar Kerja Praktek"]
+                else:
+                    contexts = ["PENGAJUAN SEMINAR KERJA PRAKTEK - b. Ketentuan Umum"]
+                return self.format_sop_items_by_context(contexts, source_label="SOP JTE", data_list=self.sop_jte_data)
+
+            if any(cue in text for cue in ["prosedur", "alur", "tata cara", "cara", "bagaimana"]):
+                return self.format_sop_items_by_context([
+                    "PENGAJUAN KERJA PRAKTEK - b. Ketentuan Umum",
+                ], source_label="SOP JTE", data_list=self.sop_jte_data)
+
+            if any(cue in text for cue in ["dokumen", "berkas", "form", "kpti"]):
+                return self.format_sop_items_by_context([
+                    "PENGAJUAN KERJA PRAKTEK - a. Syarat Pengajuan Kerja Praktek (KP)",
+                    "PENGAJUAN KERJA PRAKTEK - b. Ketentuan Umum",
+                ], source_label="SOP JTE", data_list=self.sop_jte_data)
+
+            return self.format_sop_items_by_context([
+                "PENGAJUAN KERJA PRAKTEK - a. Syarat Pengajuan Kerja Praktek (KP)",
+            ], source_label="SOP JTE", data_list=self.sop_jte_data)
 
         if target == "sempro":
             phrases = (
@@ -772,7 +800,7 @@ class MasterRuleBasedChatbot:
 
     def detect_procedure_target_after_action(self, user_query):
         text = self.normalize_text(user_query)
-        action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan|mengajukan|ajukan|dokumen|berkas|form|surat)"
+        action = r"(?:syarat|prosedur|tata cara|pendaftaran|pengajuan|mengajukan|ajukan|dokumen|berkas|form|surat|setelah|selesai|pasca|revisi)"
         targets = {
             "kp": r"(?:kp|kerja praktek|kerja praktik|seminar kp)",
             "sidang": r"(?:sidang skripsi|sidang|seminar hasil|semhas|ujian skripsi)",
